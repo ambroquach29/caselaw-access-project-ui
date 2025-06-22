@@ -1,0 +1,118 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* AovelNeo-Light */
+@font-face {
+  font-family: 'AovelNeo';
+  src: url('../fonts/AovelNeo/AovelNeoLight.woff2') format('woff2');
+  font-weight: 300;
+  font-style: normal;
+}
+
+/* AovelNeo-Regular */
+@font-face {
+  font-family: 'AovelNeo';
+  src: url('../fonts/AovelNeo/AovelNeoRegular.woff2') format('woff2');
+  font-weight: 400;
+  font-style: normal;
+}
+
+/* Greycliff-Regular */
+@font-face {
+  font-family: 'Greycliff';
+  src: url('../fonts/Greycliff/GreycliffCF-Regular.woff2') format('woff2');
+  font-weight: 400;
+  font-style: normal;
+}
+
+/* VisbyRound-Regular */
+@font-face {
+  font-family: 'VisbyRound';
+  src: url('../fonts/VisbyRound/VisbyRoundCF-Regular.woff2') format('woff2');
+  font-weight: 400;
+  font-style: normal;
+}
+
+/* Cerulya-Heavy */
+@font-face {
+  font-family: 'Cerulya';
+  src: url('../fonts/Cerulya/CerulyaCF-Heavy.woff2') format('woff2');
+  font-weight: 800;
+  font-style: normal;
+}
+
+/* Mielle-Bold */
+@font-face {
+  font-family: 'Mielle';
+  src: url('../fonts/Mielle/MielleCF-Bold.woff2') format('woff2');
+  font-weight: 700;
+  font-style: normal;
+}
+
+/* Quincy-Regular */
+@font-face {
+  font-family: 'Quincy';
+  src: url('../fonts/Quincy/QuincyCF-Regular.woff') format('woff');
+  font-weight: 400;
+  font-style: normal;
+}
+
+/*Argent-Regular */
+@font-face {
+  font-family: 'Argent';
+  src: url('../fonts/Argent/ArgentCF-Regular.woff2') format('woff2');
+  font-weight: 400;
+  font-style: normal;
+}
+
+@layer utilities {
+  .line-clamp-2 {
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+  }
+  
+  .line-clamp-3 {
+    display: -webkit-box;
+    -webkit-line-clamp: 3;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+  }
+}
+
+@layer components {
+  .prose {
+    @apply text-gray-700 leading-relaxed;
+  }
+  
+  .prose-sm {
+    @apply text-sm leading-relaxed;
+  }
+  
+  .prose p {
+    @apply mb-4;
+  }
+  
+  .prose p:last-child {
+    @apply mb-0;
+  }
+}
+
+:root {
+  --background: #ffffff;
+  --foreground: #171717;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --background: #0a0a0a;
+    --foreground: #ededed;
+  }
+}
+
+body {
+  background: var(--background);
+  color: var(--foreground);
+}
