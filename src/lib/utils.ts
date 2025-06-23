@@ -5,21 +5,40 @@ export function cn(...inputs: ClassValue[]) {
   return clsx(inputs);
 }
 
-export function formatDate(dateString: string): string {
+export function formatDate(dateInput: string | number | Date): string {
   try {
-    const date = parseISO(dateString);
+    let date: Date;
+    if (typeof dateInput === 'string') {
+      // If it's a string of digits, treat as timestamp
+      date = /^\d+$/.test(dateInput)
+        ? new Date(Number(dateInput))
+        : parseISO(dateInput);
+    } else if (typeof dateInput === 'number') {
+      date = new Date(dateInput);
+    } else {
+      date = dateInput;
+    }
     return format(date, 'MMMM d, yyyy');
   } catch {
-    return dateString;
+    return String(dateInput);
   }
 }
 
-export function formatDateTime(dateString: string): string {
+export function formatDateTime(dateInput: string | number | Date): string {
   try {
-    const date = parseISO(dateString);
+    let date: Date;
+    if (typeof dateInput === 'string') {
+      date = /^\d+$/.test(dateInput)
+        ? new Date(Number(dateInput))
+        : parseISO(dateInput);
+    } else if (typeof dateInput === 'number') {
+      date = new Date(dateInput);
+    } else {
+      date = dateInput;
+    }
     return format(date, 'MMMM d, yyyy HH:mm:ss');
   } catch {
-    return dateString;
+    return String(dateInput);
   }
 }
 
@@ -68,7 +87,7 @@ export function getCaseStatus(decisionDate: string): {
   } else if (yearsDiff < 20) {
     return { status: 'Modern', color: 'text-blue-600 bg-blue-100' };
   } else if (yearsDiff < 50) {
-    return { status: 'Historical', color: 'text-yellow-600 bg-yellow-100' };
+    return { status: 'Historical', color: 'text-yellow-600 bg-yellow-50' };
   } else {
     return { status: 'Classic', color: 'text-gray-600 bg-gray-100' };
   }

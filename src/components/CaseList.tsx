@@ -19,6 +19,7 @@ import { Case, CaseSearchResult } from '@/types/case';
 import { formatDate, truncateText, getCaseStatus } from '@/lib/utils';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
+import JurisdictionFilter from './JurisdictionFilter';
 
 type SortField =
   | 'name'
@@ -35,6 +36,7 @@ export default function CaseList() {
   const [sortField, setSortField] = useState<SortField>('decision_date');
   const [sortDirection, setSortDirection] = useState<SortDirection>('desc');
   const [showFilters, setShowFilters] = useState(false);
+  const [selectedJurisdiction, setSelectedJurisdiction] = useState('');
   const [filters, setFilters] = useState({
     jurisdiction: '',
     court: '',
@@ -67,11 +69,24 @@ export default function CaseList() {
     if (!cases) return [];
     const unique = new Set<string>();
     cases.forEach((caseItem: any) => {
-      if (caseItem.jurisdiction?.name) {
-        unique.add(caseItem.jurisdiction.name);
+      if (caseItem.jurisdiction?.name_long) {
+        unique.add(caseItem.jurisdiction.name_long);
       }
     });
     return Array.from(unique).sort();
+  }, [cases]);
+
+  // Calculate case counts for each jurisdiction
+  const jurisdictionCaseCounts = useMemo(() => {
+    if (!cases) return {};
+    const counts: Record<string, number> = {};
+    cases.forEach((caseItem: any) => {
+      if (caseItem.jurisdiction?.name_long) {
+        const jurisdiction = caseItem.jurisdiction.name_long;
+        counts[jurisdiction] = (counts[jurisdiction] || 0) + 1;
+      }
+    });
+    return counts;
   }, [cases]);
 
   const courts = useMemo(() => {
@@ -104,11 +119,10 @@ export default function CaseList() {
 
     let filtered = cases.filter((caseItem: any) => {
       // Jurisdiction filter
-      if (
-        filters.jurisdiction &&
-        caseItem.jurisdiction?.name !== filters.jurisdiction
-      ) {
-        return false;
+      if (filters.jurisdiction) {
+        if (caseItem.jurisdiction?.name_long !== filters.jurisdiction) {
+          return false;
+        }
       }
 
       // Court filter
@@ -159,8 +173,8 @@ export default function CaseList() {
           bValue = b.court?.name || '';
           break;
         case 'jurisdiction':
-          aValue = a.jurisdiction?.name || '';
-          bValue = b.jurisdiction?.name || '';
+          aValue = a.jurisdiction?.name_long || '';
+          bValue = b.jurisdiction?.name_long || '';
           break;
         case 'docket_number':
           aValue = a.docket_number || '';
@@ -194,6 +208,22 @@ export default function CaseList() {
       status: '',
       year: '',
     });
+  };
+
+  const handleJurisdictionChange = (jurisdiction: string) => {
+    setSelectedJurisdiction(jurisdiction);
+    setFilters((prev) => ({
+      ...prev,
+      jurisdiction: jurisdiction,
+    }));
+  };
+
+  const handleClearJurisdictionFilter = () => {
+    setSelectedJurisdiction('');
+    setFilters((prev) => ({
+      ...prev,
+      jurisdiction: '',
+    }));
   };
 
   const hasActiveFilters = Object.values(filters).some((value) => value !== '');
@@ -246,6 +276,15 @@ export default function CaseList() {
         </div>
       </div>
 
+      {/* Jurisdiction Filter */}
+      <JurisdictionFilter
+        selectedJurisdiction={selectedJurisdiction}
+        onJurisdictionChange={handleJurisdictionChange}
+        onClearFilter={handleClearJurisdictionFilter}
+        availableJurisdictions={jurisdictions}
+        jurisdictionCaseCounts={jurisdictionCaseCounts}
+      />
+
       {/* Search and Filters */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
         <div className="bg-white rounded-lg shadow-sm border p-6 mb-6">
@@ -294,31 +333,7 @@ export default function CaseList() {
             {/* Filter Panel */}
             {showFilters && (
               <div className="border-t pt-4 space-y-4">
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-                  {/* Jurisdiction Filter */}
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
-                      Jurisdiction
-                    </label>
-                    <select
-                      value={filters.jurisdiction}
-                      onChange={(e) =>
-                        setFilters((prev) => ({
-                          ...prev,
-                          jurisdiction: e.target.value,
-                        }))
-                      }
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                    >
-                      <option value="">All Jurisdictions</option>
-                      {jurisdictions.map((jurisdiction) => (
-                        <option key={jurisdiction} value={jurisdiction}>
-                          {jurisdiction}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                   {/* Court Filter */}
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">
@@ -543,11 +558,15 @@ export default function CaseList() {
                       </td>
                       <td className="px-6 py-4 text-left whitespace-wrap">
                         <span
-                          className={`inline-flex py-1 text-sm font-semibold rounded-full ${
-                            getCaseStatus(caseItem.decision_date).color
+                          className={`inline-flex py-1 text-sm font-semibold rounded-full px-2 ${
+                            getCaseStatus(formatDate(caseItem.decision_date))
+                              .color
                           }`}
                         >
-                          {getCaseStatus(caseItem.decision_date).status}
+                          {
+                            getCaseStatus(formatDate(caseItem.decision_date))
+                              .status
+                          }
                         </span>
                       </td>
                     </tr>
