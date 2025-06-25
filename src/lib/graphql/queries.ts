@@ -8,12 +8,6 @@ export const GET_ALL_CASES = gql`
       name_abbreviation
       decision_date
       docket_number
-      first_page
-      last_page
-      citations {
-        type
-        cite
-      }
       court {
         id
         name_abbreviation
@@ -24,52 +18,6 @@ export const GET_ALL_CASES = gql`
         name_long
         name
       }
-      cites_to {
-        cite
-        category
-        reporter
-        case_ids
-        opinion_index
-        case_paths
-        weight
-        pin_cites {
-          page
-        }
-        year
-      }
-      analysis {
-        cardinality
-        char_count
-        ocr_confidence
-        pagerank {
-          raw
-          percentile
-        }
-        sha256
-        simhash
-        word_count
-      }
-      last_updated
-      provenance {
-        date_added
-        source
-        batch
-      }
-      casebody {
-        judges
-        parties
-        opinions {
-          text
-          type
-          author
-        }
-        attorneys
-        corrections
-        head_matter
-      }
-      file_name
-      first_page_order
-      last_page_order
     }
   }
 `;
