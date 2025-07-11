@@ -1,25 +1,18 @@
 'use client';
 
 import { useState, useMemo } from 'react';
-import { useQuery } from '@apollo/client';
 import {
   Search,
-  Calendar,
   Filter,
   BookOpen,
-  MapPin,
   ChevronUp,
   ChevronDown,
-  Eye,
-  Copy,
   X,
 } from 'lucide-react';
-import { GET_ALL_CASES, SEARCH_CASES } from '@/lib/graphql/queries';
 import { Case, CaseSearchResult } from '@/types/case';
 import { formatDate, truncateText, getCaseStatus } from '@/lib/utils';
-import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import JurisdictionFilter from './JurisdictionFilter';
+import SelectJurisdiction from './SelectJurisdiction';
 
 type SortField =
   | 'name'
@@ -37,95 +30,19 @@ export default function CaseList() {
   const [sortDirection, setSortDirection] = useState<SortDirection>('desc');
   const [showFilters, setShowFilters] = useState(false);
   const [selectedJurisdiction, setSelectedJurisdiction] = useState('');
+  const [cases, setCases] = useState<Case[]>([]); // cases = All cases loaded from backend (e.g., by jurisdiction)
   const [filters, setFilters] = useState({
-    jurisdiction: '',
     court: '',
     status: '',
     year: '',
   });
 
-  const {
-    data: allCasesData,
-    loading: allCasesLoading,
-    error: allCasesError,
-  } = useQuery(GET_ALL_CASES);
-  
-  const {
-    data: searchData,
-    loading: searchLoading,
-    error: searchError,
-  } = useQuery(SEARCH_CASES, {
-    variables: { id: searchQuery },
-    skip: !searchQuery || searchQuery.length < 2,
-  });
-
-  const cases = searchQuery
-    ? searchData?.SearchCases
-    : allCasesData?.GetAllCases;
-  const loading = searchQuery ? searchLoading : allCasesLoading;
-  const error = searchQuery ? searchError : allCasesError;
-
-  // Get unique jurisdictions and courts for filter dropdowns
-  const jurisdictions = useMemo(() => {
-    if (!cases) return [];
-    const unique = new Set<string>();
-    cases.forEach((caseItem: any) => {
-      if (caseItem.jurisdiction?.name_long) {
-        unique.add(caseItem.jurisdiction.name_long);
-      }
-    });
-    return Array.from(unique).sort();
-  }, [cases]);
-
-  // Calculate case counts for each jurisdiction
-  const jurisdictionCaseCounts = useMemo(() => {
-    if (!cases) return {};
-    const counts: Record<string, number> = {};
-    cases.forEach((caseItem: any) => {
-      if (caseItem.jurisdiction?.name_long) {
-        const jurisdiction = caseItem.jurisdiction.name_long;
-        counts[jurisdiction] = (counts[jurisdiction] || 0) + 1;
-      }
-    });
-    return counts;
-  }, [cases]);
-
-  const courts = useMemo(() => {
-    if (!cases) return [];
-    const unique = new Set<string>();
-    cases.forEach((caseItem: any) => {
-      if (caseItem.court?.name) {
-        unique.add(caseItem.court.name);
-      }
-    });
-    return Array.from(unique).sort();
-  }, [cases]);
-
-  // Get unique years for filter dropdown
-  const years = useMemo(() => {
-    if (!cases) return [];
-    const unique = new Set<number>();
-    cases.forEach((caseItem: any) => {
-      if (caseItem.decision_date) {
-        const year = new Date(caseItem.decision_date).getFullYear();
-        unique.add(year);
-      }
-    });
-    return Array.from(unique).sort((a, b) => b - a); // Sort descending (newest first)
-  }, [cases]);
-
   // Sort and filter cases
-  const processedCases = useMemo(() => {
+  // processedCases =	cases after filters (court, status, year) and sorting are applied
+  const processedCases = useMemo<Case[]>(() => {
     if (!cases) return [];
 
-    let filtered = cases.filter((caseItem: any) => {
-      // Jurisdiction filter
-      if (filters.jurisdiction) {
-        if (caseItem.jurisdiction?.name_long !== filters.jurisdiction) {
-          return false;
-        }
-      }
-
+    let filtered = cases.filter((caseItem: Case) => {
       // Court filter
       if (filters.court && caseItem.court?.name !== filters.court) {
         return false;
@@ -157,7 +74,7 @@ export default function CaseList() {
     });
 
     // Sort cases
-    filtered.sort((a: any, b: any) => {
+    filtered.sort((a: Case, b: Case) => {
       let aValue, bValue;
 
       switch (sortField) {
@@ -193,6 +110,48 @@ export default function CaseList() {
     return filtered;
   }, [cases, filters, sortField, sortDirection]);
 
+  // Use in-memory search on processedCases
+  // displayCases	processedCases after the search query (name, abbreviation, docket number)
+  const displayCases = useMemo<Case[]>(() => {
+    if (!searchQuery || searchQuery.length < 2) return processedCases;
+    const q = searchQuery.toLowerCase();
+    return processedCases.filter(
+      (caseItem: Case) =>
+        (caseItem.name && caseItem.name.toLowerCase().includes(q)) ||
+        (caseItem.name_abbreviation &&
+          caseItem.name_abbreviation.toLowerCase().includes(q)) ||
+        (caseItem.docket_number &&
+          caseItem.docket_number.toLowerCase().includes(q))
+    );
+  }, [searchQuery, processedCases]);
+
+  const loading = false;
+  const error: Error | null = null;
+
+  const courts = useMemo<string[]>(() => {
+    if (!displayCases) return [];
+    const unique = new Set<string>();
+    displayCases.forEach((caseItem: Case) => {
+      if (caseItem.court?.name) {
+        unique.add(caseItem.court.name);
+      }
+    });
+    return Array.from(unique).sort();
+  }, [displayCases]);
+
+  // Get unique years for filter dropdown
+  const years = useMemo<number[]>(() => {
+    if (!displayCases) return [];
+    const unique = new Set<number>();
+    displayCases.forEach((caseItem: Case) => {
+      if (caseItem.decision_date) {
+        const year = new Date(caseItem.decision_date).getFullYear();
+        unique.add(year);
+      }
+    });
+    return Array.from(unique).sort((a, b) => b - a); // Sort descending (newest first)
+  }, [displayCases]);
+
   const handleSort = (field: SortField) => {
     if (sortField === field) {
       setSortDirection(sortDirection === 'asc' ? 'desc' : 'asc');
@@ -204,7 +163,6 @@ export default function CaseList() {
 
   const clearFilters = () => {
     setFilters({
-      jurisdiction: '',
       court: '',
       status: '',
       year: '',
@@ -213,21 +171,20 @@ export default function CaseList() {
 
   const handleJurisdictionChange = (jurisdiction: string) => {
     setSelectedJurisdiction(jurisdiction);
-    setFilters((prev) => ({
-      ...prev,
-      jurisdiction: jurisdiction,
-    }));
   };
 
-  const handleClearJurisdictionFilter = () => {
+  const handleClearJurisdictionSelect = () => {
     setSelectedJurisdiction('');
-    setFilters((prev) => ({
-      ...prev,
-      jurisdiction: '',
-    }));
+    setCases([]);
   };
 
-  const hasActiveFilters = Object.values(filters).some((value) => value !== '');
+  const handleCasesLoaded = (loadedCases: Case[]) => {
+    setCases(loadedCases);
+  };
+
+  const hasActiveFilters = Object.entries(filters).some(
+    ([key, value]) => value !== ''
+  );
 
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
@@ -238,20 +195,21 @@ export default function CaseList() {
     router.push(`/case/${caseId}`);
   };
 
-  if (error) {
-    return (
-      <div className="p-8">
-        <div className="max-w-7xl mx-auto">
-          <div className="bg-red-50 border border-red-200 rounded-lg p-6">
-            <h2 className="text-lg font-semibold text-red-800 mb-2">
-              Error Loading Cases
-            </h2>
-            <p className="text-red-600">{error.message}</p>
-          </div>
-        </div>
-      </div>
-    );
-  }
+  // Remove error handling block since error is always null
+  // if (error) {
+  //   return (
+  //     <div className="p-8">
+  //       <div className="max-w-7xl mx-auto">
+  //         <div className="bg-red-50 border border-red-200 rounded-lg p-6">
+  //           <h2 className="text-lg font-semibold text-red-800 mb-2">
+  //             Error Loading Cases
+  //           </h2>
+  //           <p className="text-red-600">{error.message}</p>
+  //         </div>
+  //       </div>
+  //     </div>
+  //   );
+  // }
 
   return (
     <div>
@@ -278,12 +236,11 @@ export default function CaseList() {
       </div>
 
       {/* Jurisdiction Filter */}
-      <JurisdictionFilter
+      <SelectJurisdiction
         selectedJurisdiction={selectedJurisdiction}
         onJurisdictionChange={handleJurisdictionChange}
-        onClearFilter={handleClearJurisdictionFilter}
-        availableJurisdictions={jurisdictions}
-        jurisdictionCaseCounts={jurisdictionCaseCounts}
+        onClearSelect={handleClearJurisdictionSelect}
+        onCasesLoaded={handleCasesLoaded}
       />
 
       {/* Search and Filters */}
@@ -300,7 +257,7 @@ export default function CaseList() {
                     placeholder="Search cases by name, abbreviation, or docket number..."
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
-                    className="w-full pl-10 pr-4 py-2 text-gray-600 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    className="w-full pl-10 pr-4 py-2 text-gray-700 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                   />
                 </div>
               </div>
@@ -348,7 +305,7 @@ export default function CaseList() {
                           court: e.target.value,
                         }))
                       }
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-500 bg-white"
                     >
                       <option value="">All Courts</option>
                       {courts.map((court) => (
@@ -372,7 +329,7 @@ export default function CaseList() {
                           status: e.target.value,
                         }))
                       }
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-500 bg-white"
                     >
                       <option value="">All Cases</option>
                       <option value="recent">Recent (Last 5 Years)</option>
@@ -393,7 +350,7 @@ export default function CaseList() {
                           year: e.target.value,
                         }))
                       }
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-500 bg-white"
                     >
                       <option value="">All Years</option>
                       {years.map((year) => (
@@ -436,7 +393,7 @@ export default function CaseList() {
               ))}
             </div>
           </div>
-        ) : processedCases && processedCases.length > 0 ? (
+        ) : displayCases && displayCases.length > 0 ? (
           <div className="bg-white rounded-lg shadow-sm border overflow-hidden">
             <div className="overflow-x-auto">
               <table className="min-w-full divide-y divide-gray-200">
@@ -526,7 +483,7 @@ export default function CaseList() {
                   </tr>
                 </thead>
                 <tbody className="bg-white divide-y divide-gray-200">
-                  {processedCases.map((caseItem: Case | CaseSearchResult) => (
+                  {displayCases.map((caseItem: Case | CaseSearchResult) => (
                     <tr
                       key={caseItem.id}
                       className="hover:bg-gray-50 cursor-pointer transition-colors"
@@ -585,7 +542,9 @@ export default function CaseList() {
             <p className="text-gray-600">
               {searchQuery || hasActiveFilters
                 ? 'No cases match your search criteria. Try adjusting your filters.'
-                : 'No cases are currently available in the database.'}
+                : selectedJurisdiction
+                ? `No cases found for ${selectedJurisdiction}. Try selecting a different jurisdiction.`
+                : 'Select a jurisdiction to view available cases.'}
             </p>
           </div>
         )}
