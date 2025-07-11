@@ -22,6 +22,50 @@ export const GET_ALL_CASES = gql`
   }
 `;
 
+export const GET_CASES_BY_COURT = gql`
+  query GetCasesByCourt($court: String!) {
+    GetCasesByCourt(court: $court) {
+      id
+      name
+      name_abbreviation
+      decision_date
+      docket_number
+      court {
+        id
+        name_abbreviation
+        name
+      }
+      jurisdiction {
+        id
+        name_long
+        name
+      }
+    }
+  }
+`;
+
+export const GET_CASES_BY_JURISDICTION = gql`
+  query GetCasesByJurisdiction($jurisdiction: String!) {
+    GetCasesByJurisdiction(jurisdiction: $jurisdiction) {
+      id
+      name
+      name_abbreviation
+      decision_date
+      docket_number
+      court {
+        id
+        name_abbreviation
+        name
+      }
+      jurisdiction {
+        id
+        name_long
+        name
+      }
+    }
+  }
+`;
+
 export const GET_CASE_BY_ID = gql`
   query GetCaseById($id: ID!) {
     GetCaseById(id: $id) {
