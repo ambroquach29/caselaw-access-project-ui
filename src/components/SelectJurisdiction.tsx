@@ -112,7 +112,7 @@ export default function SelectJurisdiction({
                     key={jurisdiction}
                     onClick={() => handleJurisdictionClick(jurisdiction)}
                     disabled={loading}
-                    className={`px-3 py-2 text-sm rounded-lg border transition-colors text-left ${
+                    className={`px-4 py-3 text-sm rounded-lg border transition-colors text-left ${
                       isSelected
                         ? 'bg-blue-600 text-white border-blue-600'
                         : 'bg-gray-50 text-gray-700 border-gray-200 hover:bg-gray-100 hover:border-gray-300'

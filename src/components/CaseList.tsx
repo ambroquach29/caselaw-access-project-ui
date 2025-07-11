@@ -22,6 +22,34 @@ type SortField =
   | 'docket_number';
 type SortDirection = 'asc' | 'desc';
 
+// Spinner component for loading state
+function Spinner() {
+  return (
+    <div className="flex justify-center items-center py-12">
+      <svg
+        className="animate-spin h-8 w-8 text-blue-600"
+        xmlns="http://www.w3.org/2000/svg"
+        fill="none"
+        viewBox="0 0 24 24"
+      >
+        <circle
+          className="opacity-25"
+          cx="12"
+          cy="12"
+          r="10"
+          stroke="currentColor"
+          strokeWidth="4"
+        ></circle>
+        <path
+          className="opacity-75"
+          fill="currentColor"
+          d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z"
+        ></path>
+      </svg>
+    </div>
+  );
+}
+
 export default function CaseList() {
   const router = useRouter();
   const [searchQuery, setSearchQuery] = useState('');
@@ -31,6 +59,7 @@ export default function CaseList() {
   const [showFilters, setShowFilters] = useState(false);
   const [selectedJurisdiction, setSelectedJurisdiction] = useState('');
   const [cases, setCases] = useState<Case[]>([]); // cases = All cases loaded from backend (e.g., by jurisdiction)
+  const [isLoadingCases, setIsLoadingCases] = useState(false);
   const [filters, setFilters] = useState({
     court: '',
     status: '',
@@ -125,7 +154,6 @@ export default function CaseList() {
     );
   }, [searchQuery, processedCases]);
 
-  const loading = false;
   const error: Error | null = null;
 
   const courts = useMemo<string[]>(() => {
@@ -171,15 +199,18 @@ export default function CaseList() {
 
   const handleJurisdictionChange = (jurisdiction: string) => {
     setSelectedJurisdiction(jurisdiction);
+    setIsLoadingCases(true); // Start loading when jurisdiction changes
   };
 
   const handleClearJurisdictionSelect = () => {
     setSelectedJurisdiction('');
     setCases([]);
+    setIsLoadingCases(false); // Not loading if nothing is selected
   };
 
   const handleCasesLoaded = (loadedCases: Case[]) => {
     setCases(loadedCases);
+    setIsLoadingCases(false); // Stop loading when cases are loaded
   };
 
   const hasActiveFilters = Object.entries(filters).some(
@@ -194,22 +225,6 @@ export default function CaseList() {
   const handleRowClick = (caseId: string) => {
     router.push(`/case/${caseId}`);
   };
-
-  // Remove error handling block since error is always null
-  // if (error) {
-  //   return (
-  //     <div className="p-8">
-  //       <div className="max-w-7xl mx-auto">
-  //         <div className="bg-red-50 border border-red-200 rounded-lg p-6">
-  //           <h2 className="text-lg font-semibold text-red-800 mb-2">
-  //             Error Loading Cases
-  //           </h2>
-  //           <p className="text-red-600">{error.message}</p>
-  //         </div>
-  //       </div>
-  //     </div>
-  //   );
-  // }
 
   return (
     <div>
@@ -381,17 +396,9 @@ export default function CaseList() {
         </div>
 
         {/* Cases Table */}
-        {loading ? (
+        {isLoadingCases ? (
           <div className="bg-white rounded-lg shadow-sm border overflow-hidden">
-            <div className="animate-pulse">
-              <div className="h-12 bg-gray-100"></div>
-              {[...Array(10)].map((_, i) => (
-                <div
-                  key={i}
-                  className="h-16 bg-white border-t border-gray-100"
-                ></div>
-              ))}
-            </div>
+            <Spinner />
           </div>
         ) : displayCases && displayCases.length > 0 ? (
           <div className="bg-white rounded-lg shadow-sm border overflow-hidden">
