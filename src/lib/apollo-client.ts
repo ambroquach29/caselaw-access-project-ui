@@ -7,9 +7,9 @@ import {
 import { setContext } from '@apollo/client/link/context';
 
 const httpLink = createHttpLink({
-  uri: 'http://localhost:4000/graphql',
+  uri: 'http://localhost:5001/graphql',
   headers: {
-    Authorization: 'apollo-starter-kit', // API authorization token (static)
+    Authorization: 'apollo-caselaw-api', // API authorization token (static)
     'Content-Type': 'application/json',
   },
 });
