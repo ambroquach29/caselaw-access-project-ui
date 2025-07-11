@@ -140,26 +140,6 @@ export const GET_CASE_BY_ID = gql`
   }
 `;
 
-export const SEARCH_CASES = gql`
-  query SearchCases($id: String!) {
-    SearchCases(id: $id) {
-      id
-      name
-      name_abbreviation
-      decision_date
-      docket_number
-      court {
-        name
-        name_abbreviation
-      }
-      jurisdiction {
-        name
-        name_long
-      }
-    }
-  }
-`;
-
 export const GET_CASES_BY_DATE_RANGE = gql`
   query GetCasesByDateRange($startDate: String!, $endDate: String!) {
     GetCasesByDateRange(startDate: $startDate, endDate: $endDate) {
