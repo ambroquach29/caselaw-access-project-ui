@@ -159,3 +159,25 @@ export const GET_CASES_BY_DATE_RANGE = gql`
     }
   }
 `;
+
+export const SEARCH_CASES = gql`
+  query SearchCases($searchText: String!, $jurisdiction: String) {
+    SearchCases(searchText: $searchText, jurisdiction: $jurisdiction) {
+      id
+      name
+      name_abbreviation
+      decision_date
+      docket_number
+      court {
+        id
+        name
+        name_abbreviation
+      }
+      jurisdiction {
+        id
+        name
+        name_long
+      }
+    }
+  }
+`;
