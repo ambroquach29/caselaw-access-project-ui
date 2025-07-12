@@ -103,7 +103,7 @@ export default function SelectJurisdiction({
             </div>
 
             {/* Jurisdictions Grid */}
-            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-2 max-h-64 overflow-y-auto">
+            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-2 max-h-48 overflow-y-auto">
               {searchedJurisdictions.map((jurisdiction) => {
                 const isSelected = selectedJurisdiction === jurisdiction;
 
