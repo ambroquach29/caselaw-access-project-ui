@@ -1,6 +1,6 @@
 'use client';
 import { useRouter } from 'next/navigation';
-import { useState, useMemo, useEffect } from 'react';
+import { useState, useMemo, useEffect, useCallback } from 'react';
 import {
   Search,
   Filter,
@@ -55,12 +55,12 @@ function Spinner() {
 export default function CaseList() {
   const router = useRouter();
 
-  // CASES STATE by SELECTED JURISDICTION
-  const [cases, setCases] = useState<Case[]>([]); // cases = All cases loaded from backend (e.g., by jurisdiction)
+  // CASES STATE (for browse by jurisdiction)
+  const [cases, setCases] = useState<Case[]>([]);
   const [selectedJurisdiction, setSelectedJurisdiction] = useState('');
   const [isLoadingCases, setIsLoadingCases] = useState(false);
 
-  // SEARCH STATE
+  // SEARCH STATE (global)
   const [searchQuery, setSearchQuery] = useState('');
   const [searchResultCases, setSearchResultCases] = useState<Case[]>([]);
   const debouncedSearchQuery = useDebounce(searchQuery, 500);
@@ -69,28 +69,13 @@ export default function CaseList() {
     runSearch,
     { loading: isSearching, data: searchData, error: searchError },
   ] = useLazyQuery(SEARCH_CASES, {
-    // When the query successfully completes, update our state
     onCompleted: (data) => {
       setSearchResultCases(data.SearchCases);
     },
-    // If the query errors, clear the results
     onError: () => {
       setSearchResultCases([]);
     },
   });
-
-  useEffect(() => {
-    // Only run the search if the debounced query is not empty.
-    if (debouncedSearchQuery && debouncedSearchQuery.length > 1) {
-      clearFilters();
-      runSearch({
-        variables: {
-          searchText: debouncedSearchQuery,
-          jurisdiction: selectedJurisdiction,
-        },
-      });
-    }
-  }, [debouncedSearchQuery, runSearch, selectedJurisdiction]);
 
   // SORTING & FILTERING STATE
   const [sortField, setSortField] = useState<SortField>('decision_date');
@@ -103,26 +88,47 @@ export default function CaseList() {
     year: '',
   });
 
-  // Create an active flag - true if searchQuery is not empty and length > 1 to display empty message clearer
+  // Memoize clearFilters to stabilize its identity across renders
+  const clearFilters = useCallback(() => {
+    setFilters({
+      jurisdiction: '',
+      court: '',
+      status: '',
+      year: '',
+    });
+  }, []); // Empty dependency array means it's created only once
+
+  useEffect(() => {
+    // Only run search if the debounced query is not empty.
+    if (debouncedSearchQuery && debouncedSearchQuery.length > 1) {
+      // Clear jurisdiction state to make search global and independent
+      setSelectedJurisdiction('');
+      setCases([]);
+      clearFilters();
+
+      // Clear previous search results immediately to prevent flashing
+      setSearchResultCases([]);
+
+      runSearch({
+        variables: {
+          searchText: debouncedSearchQuery,
+        },
+      });
+    }
+  }, [debouncedSearchQuery, runSearch, clearFilters]);
+
   const isSearchActive =
     debouncedSearchQuery && debouncedSearchQuery.length > 1;
 
-  // sourceData = cases from search results or selected jurisdiction
-  const sourceData =
-    isSearchActive && searchResultCases ? searchData.SearchCases : cases;
+  const sourceData = isSearchActive ? searchResultCases : cases;
 
-  // Sort and filter cases
-  // processedCases =	sourceData after filters (court, status, year) and sorting are applied
   const processedCases = useMemo<Case[]>(() => {
     if (!sourceData) return [];
 
     let filtered = sourceData.filter((caseItem: Case) => {
-      // Court filter
       if (filters.court && caseItem.court?.name !== filters.court) {
         return false;
       }
-
-      // Status filter
       if (filters.status) {
         const caseDate = new Date(caseItem.decision_date);
         const fiveYearsAgo = new Date();
@@ -135,22 +141,17 @@ export default function CaseList() {
           return false;
         }
       }
-
-      // Year filter
       if (filters.year) {
         const caseYear = new Date(caseItem.decision_date).getFullYear();
         if (caseYear !== parseInt(filters.year)) {
           return false;
         }
       }
-
       return true;
     });
 
-    // Sort cases
     filtered.sort((a: Case, b: Case) => {
       let aValue, bValue;
-
       switch (sortField) {
         case 'name':
           aValue = a.name_abbreviation || a.name || '';
@@ -175,7 +176,6 @@ export default function CaseList() {
         default:
           return 0;
       }
-
       if (aValue < bValue) return sortDirection === 'asc' ? -1 : 1;
       if (aValue > bValue) return sortDirection === 'asc' ? 1 : -1;
       return 0;
@@ -197,7 +197,6 @@ export default function CaseList() {
     return Array.from(unique).sort();
   }, [processedCases]);
 
-  // Get unique years for filter dropdown
   const years = useMemo<number[]>(() => {
     if (!processedCases) return [];
     const unique = new Set<number>();
@@ -207,7 +206,7 @@ export default function CaseList() {
         unique.add(year);
       }
     });
-    return Array.from(unique).sort((a, b) => b - a); // Sort descending (newest first)
+    return Array.from(unique).sort((a, b) => b - a);
   }, [processedCases]);
 
   const handleSort = (field: SortField) => {
@@ -219,38 +218,32 @@ export default function CaseList() {
     }
   };
 
-  const clearFilters = () => {
-    setFilters({
-      jurisdiction: '',
-      court: '',
-      status: '',
-      year: '',
-    });
-  };
+  const handleJurisdictionChange = useCallback(
+    (jurisdiction: string) => {
+      setSearchQuery('');
+      setSearchResultCases([]);
+      clearFilters();
+      setSelectedJurisdiction(jurisdiction);
+      setIsLoadingCases(true);
+    },
+    [clearFilters]
+  );
 
-  const handleJurisdictionChange = (jurisdiction: string) => {
+  const handleClearJurisdictionSelect = useCallback(() => {
     setSearchQuery('');
-    clearFilters();
-    setSelectedJurisdiction(jurisdiction);
-    setIsLoadingCases(true); // Start loading when jurisdiction changes
-  };
-
-  const handleClearJurisdictionSelect = () => {
-    setSearchQuery('');
+    setSearchResultCases([]);
     clearFilters();
     setSelectedJurisdiction('');
     setCases([]);
-    setIsLoadingCases(false); // Not loading if nothing is selected
-  };
+    setIsLoadingCases(false);
+  }, [clearFilters]);
 
   const handleCasesLoaded = (loadedCases: Case[]) => {
     setCases(loadedCases);
-    setIsLoadingCases(false); // Stop loading when cases are loaded
+    setIsLoadingCases(false);
   };
 
-  const hasActiveFilters = Object.entries(filters).some(
-    ([key, value]) => value !== ''
-  );
+  const hasActiveFilters = Object.values(filters).some((value) => value !== '');
 
   const handleRowClick = (caseId: string) => {
     router.push(`/case/${caseId}`);
@@ -299,7 +292,7 @@ export default function CaseList() {
                   <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
                   <input
                     type="text"
-                    placeholder="Search cases by name, abbreviation, or docket number..."
+                    placeholder="Search all cases by name, abbreviation, or docket number..."
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
                     className="w-full pl-10 pr-4 py-2 text-gray-700 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
@@ -324,12 +317,6 @@ export default function CaseList() {
                     </span>
                   )}
                 </button>
-                {/* <button
-                  type="submit"
-                  className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition-colors"
-                >
-                  Search
-                </button> */}
               </div>
             </div>
 
@@ -580,10 +567,8 @@ export default function CaseList() {
               {isSearchActive
                 ? 'Your search returned no results. Try a different query.'
                 : hasActiveFilters
-                ? 'No cases match your filter criteria. Try adjusting your filters.'
-                : selectedJurisdiction
-                ? `No cases found for ${selectedJurisdiction}. Try selecting a different jurisdiction.`
-                : 'Select a jurisdiction to view available cases.'}
+                ? 'No cases match your filter criteria. Try adjusting them.'
+                : 'Select a jurisdiction to browse cases or use the search bar for a global search.'}
             </p>
           </div>
         )}
