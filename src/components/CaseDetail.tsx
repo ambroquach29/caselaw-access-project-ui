@@ -411,31 +411,31 @@ export default function CaseDetail() {
                 <div className="flex justify-between">
                   <span className="text-gray-700">Word Count:</span>
                   <span className="text-gray-600">
-                    {formatNumber(caseData.analysis.word_count)}
+                    {caseData.analysis?.word_count ? formatNumber(caseData.analysis.word_count) : 'N/A'}
                   </span>
                 </div>
                 <div className="flex justify-between">
                   <span className="text-gray-700">Character Count:</span>
                   <span className="text-gray-600">
-                    {formatNumber(caseData.analysis.char_count)}
+                    {caseData.analysis?.char_count ? formatNumber(caseData.analysis.char_count) : 'N/A'}
                   </span>
                 </div>
                 <div className="flex justify-between">
                   <span className="text-gray-700">OCR Confidence:</span>
                   <span className="text-gray-600">
-                    {formatPercentage(caseData.analysis.ocr_confidence)}
+                    {caseData.analysis?.ocr_confidence ? formatPercentage(caseData.analysis.ocr_confidence) : 'N/A'}
                   </span>
                 </div>
                 <div className="flex justify-between">
                   <span className="text-gray-700">Page Rank:</span>
                   <span className="text-gray-600">
-                    {formatPercentage(caseData.analysis.pagerank.percentile)}
+                    {caseData.analysis?.pagerank?.percentile ? formatPercentage(caseData.analysis.pagerank.percentile) : 'N/A'}
                   </span>
                 </div>
                 <div className="flex justify-between">
                   <span className="text-gray-700">Cardinality:</span>
                   <span className="text-gray-600">
-                    {formatNumber(caseData.analysis.cardinality)}
+                    {caseData.analysis?.cardinality ? formatNumber(caseData.analysis.cardinality) : 'N/A'}
                   </span>
                 </div>
               </div>
@@ -449,17 +449,17 @@ export default function CaseDetail() {
               <div className="space-y-3 text-sm">
                 <div>
                   <span className="font-medium text-gray-700">Source:</span>
-                  <p className="text-gray-600">{caseData.provenance.source}</p>
+                  <p className="text-gray-600">{caseData.provenance?.source || 'N/A'}</p>
                 </div>
                 <div>
                   <span className="font-medium text-gray-700">Date Added:</span>
                   <p className="text-gray-600">
-                    {formatDate(caseData.provenance.date_added)}
+                    {caseData.provenance?.date_added ? formatDate(caseData.provenance.date_added) : 'N/A'}
                   </p>
                 </div>
                 <div>
                   <span className="font-medium text-gray-700">Batch:</span>
-                  <p className="text-gray-600">{caseData.provenance.batch}</p>
+                  <p className="text-gray-600">{caseData.provenance?.batch || 'N/A'}</p>
                 </div>
               </div>
             </div>
