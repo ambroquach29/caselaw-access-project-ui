@@ -1,5 +1,6 @@
 import { gql } from '@apollo/client';
 
+// Case Queries
 export const GET_ALL_CASES = gql`
   query GetAllCases {
     GetAllCases {
@@ -178,6 +179,50 @@ export const SEARCH_CASES = gql`
         name
         name_long
       }
+    }
+  }
+`;
+
+export const SEMANTIC_SEARCH_CASES = gql`
+  query SemanticSearchCases($searchText: String!, $jurisdiction: String) {
+    SemanticSearchCases(searchText: $searchText, jurisdiction: $jurisdiction) {
+      id
+      name
+      name_abbreviation
+      decision_date
+      docket_number
+      court {
+        id
+        name
+        name_abbreviation
+      }
+      jurisdiction {
+        id
+        name
+        name_long
+      }
+    }
+  }
+`;
+
+// Court Queries
+export const GET_ALL_COURTS = gql`
+  query GetAllCourts {
+    GetAllCourts {
+      id
+      name
+      name_abbreviation
+    }
+  }
+`;
+
+// Jurisdiction Queries
+export const GET_ALL_JURISDICTIONS = gql`
+  query GetAllJurisdictions {
+    GetAllJurisdictions {
+      id
+      name
+      name_long
     }
   }
 `;
