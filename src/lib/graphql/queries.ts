@@ -1,68 +1,112 @@
 import { gql } from '@apollo/client';
 
-// Case Queries
+// Case Queries with Pagination
 export const GET_ALL_CASES = gql`
-  query GetAllCases {
-    GetAllCases {
-      id
-      name
-      name_abbreviation
-      decision_date
-      docket_number
-      court {
-        id
-        name_abbreviation
-        name
+  query GetAllCases($first: Int, $after: String) {
+    GetAllCases(first: $first, after: $after) {
+      edges {
+        node {
+          id
+          name
+          name_abbreviation
+          decision_date
+          docket_number
+          court {
+            id
+            name_abbreviation
+            name
+          }
+          jurisdiction {
+            id
+            name_long
+            name
+          }
+        }
+        cursor
       }
-      jurisdiction {
-        id
-        name_long
-        name
+      pageInfo {
+        hasNextPage
+        hasPreviousPage
+        startCursor
+        endCursor
       }
+      totalCount
     }
   }
 `;
 
 export const GET_CASES_BY_COURT = gql`
-  query GetCasesByCourt($court: String!) {
-    GetCasesByCourt(court: $court) {
-      id
-      name
-      name_abbreviation
-      decision_date
-      docket_number
-      court {
-        id
-        name_abbreviation
-        name
+  query GetCasesByCourt($court: String!, $first: Int, $after: String) {
+    GetCasesByCourt(court: $court, first: $first, after: $after) {
+      edges {
+        node {
+          id
+          name
+          name_abbreviation
+          decision_date
+          docket_number
+          court {
+            id
+            name_abbreviation
+            name
+          }
+          jurisdiction {
+            id
+            name_long
+            name
+          }
+        }
+        cursor
       }
-      jurisdiction {
-        id
-        name_long
-        name
+      pageInfo {
+        hasNextPage
+        hasPreviousPage
+        startCursor
+        endCursor
       }
+      totalCount
     }
   }
 `;
 
 export const GET_CASES_BY_JURISDICTION = gql`
-  query GetCasesByJurisdiction($jurisdiction: String!) {
-    GetCasesByJurisdiction(jurisdiction: $jurisdiction) {
-      id
-      name
-      name_abbreviation
-      decision_date
-      docket_number
-      court {
-        id
-        name_abbreviation
-        name
+  query GetCasesByJurisdiction(
+    $jurisdiction: String!
+    $first: Int
+    $after: String
+  ) {
+    GetCasesByJurisdiction(
+      jurisdiction: $jurisdiction
+      first: $first
+      after: $after
+    ) {
+      edges {
+        node {
+          id
+          name
+          name_abbreviation
+          decision_date
+          docket_number
+          court {
+            id
+            name_abbreviation
+            name
+          }
+          jurisdiction {
+            id
+            name_long
+            name
+          }
+        }
+        cursor
       }
-      jurisdiction {
-        id
-        name_long
-        name
+      pageInfo {
+        hasNextPage
+        hasPreviousPage
+        startCursor
+        endCursor
       }
+      totalCount
     }
   }
 `;
@@ -142,43 +186,87 @@ export const GET_CASE_BY_ID = gql`
 `;
 
 export const GET_CASES_BY_DATE_RANGE = gql`
-  query GetCasesByDateRange($startDate: String!, $endDate: String!) {
-    GetCasesByDateRange(startDate: $startDate, endDate: $endDate) {
-      id
-      name
-      name_abbreviation
-      decision_date
-      docket_number
-      court {
-        name
-        name_abbreviation
+  query GetCasesByDateRange(
+    $startDate: String!
+    $endDate: String!
+    $first: Int
+    $after: String
+  ) {
+    GetCasesByDateRange(
+      startDate: $startDate
+      endDate: $endDate
+      first: $first
+      after: $after
+    ) {
+      edges {
+        node {
+          id
+          name
+          name_abbreviation
+          decision_date
+          docket_number
+          court {
+            name
+            name_abbreviation
+          }
+          jurisdiction {
+            name
+            name_long
+          }
+        }
+        cursor
       }
-      jurisdiction {
-        name
-        name_long
+      pageInfo {
+        hasNextPage
+        hasPreviousPage
+        startCursor
+        endCursor
       }
+      totalCount
     }
   }
 `;
 
 export const SEARCH_CASES = gql`
-  query SearchCases($searchText: String!, $jurisdiction: String) {
-    SearchCases(searchText: $searchText, jurisdiction: $jurisdiction) {
-      id
-      name
-      name_abbreviation
-      decision_date
-      docket_number
-      court {
-        id
-        name
-        name_abbreviation
+  query SearchCases(
+    $searchText: String!
+    $jurisdiction: String
+    $first: Int
+    $after: String
+  ) {
+    SearchCases(
+      searchText: $searchText
+      jurisdiction: $jurisdiction
+      first: $first
+      after: $after
+    ) {
+      edges {
+        node {
+          id
+          name
+          name_abbreviation
+          decision_date
+          docket_number
+          court {
+            id
+            name
+            name_abbreviation
+          }
+          jurisdiction {
+            id
+            name
+            name_long
+          }
+        }
+        cursor
       }
-      jurisdiction {
-        id
-        name
-        name_long
+      pageInfo {
+        hasNextPage
+        hasPreviousPage
+        startCursor
+        endCursor
       }
+      totalCount
     }
   }
 `;
