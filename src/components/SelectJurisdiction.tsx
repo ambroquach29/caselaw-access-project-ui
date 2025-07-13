@@ -1,16 +1,19 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useLazyQuery } from '@apollo/client';
 import { ChevronDown, ChevronUp, MapPin, X } from 'lucide-react';
 import { GET_CASES_BY_JURISDICTION } from '@/lib/graphql/queries';
 import { ALL_JURISDICTIONS } from '@/lib/jurisdictions';
+import { CaseConnection, PaginationArgs } from '@/types/case';
 
 interface SelectJurisdictionProps {
   selectedJurisdiction: string;
   onJurisdictionChange: (jurisdiction: string) => void;
   onClearSelect: () => void;
   onCasesLoaded: (cases: any[]) => void;
+  onPaginationDataLoaded?: (paginationData: CaseConnection) => void;
+  paginationArgs?: PaginationArgs;
   isLoading?: boolean;
 }
 
@@ -19,6 +22,8 @@ export default function SelectJurisdiction({
   onJurisdictionChange,
   onClearSelect,
   onCasesLoaded,
+  onPaginationDataLoaded,
+  paginationArgs,
   isLoading: externalLoading,
 }: SelectJurisdictionProps) {
   const [isMinimized, setIsMinimized] = useState(false);
@@ -28,8 +33,25 @@ export default function SelectJurisdiction({
     GET_CASES_BY_JURISDICTION,
     {
       onCompleted: (data) => {
+        console.log('🔍 Query completed:', {
+          jurisdiction: selectedJurisdiction,
+          paginationArgs,
+          hasData: !!data?.GetCasesByJurisdiction,
+          edgesCount: data?.GetCasesByJurisdiction?.edges?.length || 0,
+          endCursor: data?.GetCasesByJurisdiction?.pageInfo?.endCursor,
+          hasNextPage: data?.GetCasesByJurisdiction?.pageInfo?.hasNextPage,
+        });
+
         if (data?.GetCasesByJurisdiction) {
-          onCasesLoaded(data.GetCasesByJurisdiction);
+          const connection = data.GetCasesByJurisdiction;
+          // Extract cases from edges for backward compatibility
+          const cases = connection.edges.map((edge: any) => edge.node);
+          onCasesLoaded(cases);
+
+          // Pass pagination data if callback is provided
+          if (onPaginationDataLoaded) {
+            onPaginationDataLoaded(connection);
+          }
         } else {
           onCasesLoaded([]);
         }
@@ -42,6 +64,24 @@ export default function SelectJurisdiction({
     }
   );
 
+  // Handle jurisdiction selection and pagination changes
+  useEffect(() => {
+    if (selectedJurisdiction) {
+      console.log(
+        '🔍 Fetching cases for jurisdiction:',
+        selectedJurisdiction,
+        paginationArgs
+      );
+
+      getCasesByJurisdiction({
+        variables: {
+          jurisdiction: selectedJurisdiction,
+          ...paginationArgs,
+        },
+      });
+    }
+  }, [selectedJurisdiction, paginationArgs]);
+
   const searchedJurisdictions = ALL_JURISDICTIONS.filter((jurisdiction) =>
     jurisdiction.toLowerCase().includes(searchTerm.toLowerCase())
   );
@@ -51,9 +91,6 @@ export default function SelectJurisdiction({
       onClearSelect();
     } else {
       onJurisdictionChange(jurisdiction);
-      await getCasesByJurisdiction({
-        variables: { jurisdiction },
-      });
     }
   };
 
