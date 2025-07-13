@@ -2,9 +2,31 @@ import { BookOpen } from 'lucide-react';
 
 interface CaseListHeaderProps {
   caseCount: number;
+  totalCount?: number;
+  isSearchActive?: boolean;
+  selectedJurisdiction?: string;
 }
 
-export default function CaseListHeader({ caseCount }: CaseListHeaderProps) {
+export default function CaseListHeader({
+  caseCount,
+  totalCount,
+  isSearchActive = false,
+  selectedJurisdiction,
+}: CaseListHeaderProps) {
+  // Use total count if available, otherwise fall back to current count
+  const displayCount = totalCount || caseCount;
+
+  // Determine the context for the count display
+  const getCountText = () => {
+    if (isSearchActive) {
+      return `${displayCount.toLocaleString()} search results`;
+    } else if (selectedJurisdiction) {
+      return `${displayCount.toLocaleString()} cases in ${selectedJurisdiction}`;
+    } else {
+      return `${displayCount.toLocaleString()} cases available`;
+    }
+  };
+
   return (
     <div className="bg-white shadow-sm">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
@@ -20,7 +42,7 @@ export default function CaseListHeader({ caseCount }: CaseListHeaderProps) {
           <div className="mt-4 sm:mt-0">
             <div className="flex items-center space-x-2 text-sm text-gray-500">
               <BookOpen className="h-4 w-4" />
-              <span>{caseCount} cases available</span>
+              <span>{getCountText()}</span>
             </div>
           </div>
         </div>
