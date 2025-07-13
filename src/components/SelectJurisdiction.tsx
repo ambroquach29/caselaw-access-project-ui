@@ -11,6 +11,7 @@ interface SelectJurisdictionProps {
   onJurisdictionChange: (jurisdiction: string) => void;
   onClearSelect: () => void;
   onCasesLoaded: (cases: any[]) => void;
+  isLoading?: boolean;
 }
 
 export default function SelectJurisdiction({
@@ -18,6 +19,7 @@ export default function SelectJurisdiction({
   onJurisdictionChange,
   onClearSelect,
   onCasesLoaded,
+  isLoading: externalLoading,
 }: SelectJurisdictionProps) {
   const [isMinimized, setIsMinimized] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
@@ -34,6 +36,8 @@ export default function SelectJurisdiction({
       },
       onError: (error) => {
         console.error('Error fetching cases by jurisdiction:', error);
+        // Reset loading state on error
+        onCasesLoaded([]);
       },
     }
   );
@@ -73,7 +77,7 @@ export default function SelectJurisdiction({
                 </button>
               </span>
             )}
-            {loading && (
+            {(loading || externalLoading) && (
               <span className="text-sm text-gray-500">Loading cases...</span>
             )}
           </div>
@@ -111,12 +115,16 @@ export default function SelectJurisdiction({
                   <button
                     key={jurisdiction}
                     onClick={() => handleJurisdictionClick(jurisdiction)}
-                    disabled={loading}
+                    disabled={loading || externalLoading}
                     className={`px-4 py-3 text-sm rounded-lg border transition-colors text-left ${
                       isSelected
                         ? 'bg-blue-600 text-white border-blue-600'
                         : 'bg-gray-50 text-gray-700 border-gray-200 hover:bg-gray-100 hover:border-gray-300'
-                    } ${loading && isSelected ? 'opacity-75' : ''}`}
+                    } ${
+                      (loading || externalLoading) && isSelected
+                        ? 'opacity-75'
+                        : ''
+                    }`}
                   >
                     {jurisdiction}
                   </button>
