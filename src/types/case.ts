@@ -97,3 +97,27 @@ export interface CaseSearchResult {
   court: Court;
   jurisdiction: Jurisdiction;
 }
+
+// Pagination types
+export interface PageInfo {
+  hasNextPage: boolean;
+  hasPreviousPage: boolean;
+  startCursor: string | null;
+  endCursor: string | null;
+}
+
+export interface CaseEdge {
+  node: Case;
+  cursor: string;
+}
+
+export interface CaseConnection {
+  edges: CaseEdge[];
+  pageInfo: PageInfo;
+  totalCount: number;
+}
+
+export interface PaginationArgs {
+  first?: number;
+  after?: string;
+}
