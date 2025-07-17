@@ -27,7 +27,7 @@ A modern, responsive web application for browsing and searching case law data, b
 
 - Node.js 18+
 - npm or yarn
-- Backend GraphQL API running on `http://localhost:4000`
+- Backend GraphQL API running on `http://localhost:5001`
 
 ### Installation
 
@@ -116,8 +116,8 @@ The application uses a dual-token system:
 ### 1. API Authorization Token (Static)
 
 - **Purpose**: Authenticates the frontend application to the API
-- **Token**: `apollo-starter-kit`
-- **Header**: `Authorization: apollo-starter-kit`
+- **Token**: `apollo-caselaw-api`
+- **Header**: `Authorization: apollo-caselaw-api`
 - **Scope**: Application-level access to the GraphQL API
 
 ### 2. User Authentication Token (Dynamic)
