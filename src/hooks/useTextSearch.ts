@@ -1,87 +1,188 @@
-import { useState, useEffect, useCallback, useRef } from 'react';
-import { useLazyQuery, ApolloError } from '@apollo/client';
+import { useState, useEffect, useCallback } from 'react';
+import { useLazyQuery } from '@apollo/client';
 import useDebounce from '@/hooks/useDebounce';
 import { SEARCH_CASES } from '@/lib/graphql/queries';
-import { Case } from '@/types/case';
+import { Case, CaseConnection, PaginationArgs } from '@/types/case';
 
-// 1. Add explicit types for better type safety
 interface SearchData {
-  SearchCases: Case[];
+  SearchCases: CaseConnection;
 }
 
 interface SearchVariables {
   searchText: string;
+  first?: number;
+  after?: string;
 }
 
 export function useTextSearch() {
   const [searchQuery, setSearchQuery] = useState('');
   const debouncedSearchQuery = useDebounce(searchQuery, 500);
-  const currentSearchRef = useRef<string>('');
+
+  // Simplified pagination state
+  const [paginationArgs, setPaginationArgs] = useState<PaginationArgs>({
+    first: 50,
+  });
 
   const [
     runSearch,
-    { loading: isSearching, error: searchError, data: searchData, called },
+    {
+      loading: isSearching,
+      error: searchError,
+      data: searchData,
+      networkStatus,
+    },
   ] = useLazyQuery<SearchData, SearchVariables>(SEARCH_CASES, {
-    fetchPolicy: 'cache-and-network',
+    fetchPolicy: 'cache-first',
+    notifyOnNetworkStatusChange: true,
   });
 
-  // Track if we should consider the search as "called" for the current query
-  const [currentSearchCalled, setCurrentSearchCalled] = useState(false);
+  // Simplified state - only track if search is active and has results
+  const isSearchActive = debouncedSearchQuery.length > 1;
+  const isActuallySearching = isSearching && networkStatus !== 1; // Exclude cache hits
 
-  useEffect(() => {
-    // Effect's single responsibility is to trigger the search
-    if (debouncedSearchQuery && debouncedSearchQuery.length > 1) {
-      currentSearchRef.current = debouncedSearchQuery;
-      setCurrentSearchCalled(true);
-      runSearch({
-        variables: { searchText: debouncedSearchQuery },
-      });
-    } else {
-      // Clear the current search when query is too short
-      currentSearchRef.current = '';
-      setCurrentSearchCalled(false);
-    }
-  }, [debouncedSearchQuery, runSearch]);
-
-  const isSearchLongEnough = debouncedSearchQuery.length > 1;
-
-  // 2. Only show results if they match the current search query
+  // Extract cases from search results
   const searchResultCases =
-    isSearchLongEnough &&
-    searchData?.SearchCases &&
-    currentSearchRef.current === debouncedSearchQuery
-      ? searchData.SearchCases
-      : [];
+    searchData?.SearchCases?.edges?.map((edge) => edge.node) || [];
 
-  // 3. Add a more specific state to know if a search was tried but had no results
-  const hasNoResults =
-    currentSearchCalled &&
-    !isSearching &&
-    isSearchLongEnough &&
-    searchResultCases.length === 0;
+  // Simplified pagination info
+  const pageInfo = searchData?.SearchCases?.pageInfo || {
+    hasNextPage: false,
+    hasPreviousPage: false,
+    startCursor: null,
+    endCursor: null,
+  };
 
-  // 4. (Optional) Add a dedicated reset function for a cleaner API
+  const totalCount = searchData?.SearchCases?.totalCount || 0;
+
+  // Track cursor stack for backward navigation
+  const [cursorStack, setCursorStack] = useState<string[]>([]);
+
+  // Track current page number (1-based)
+  const [currentPage, setCurrentPage] = useState(1);
+
+  // Effect to trigger search when query changes
+  useEffect(() => {
+    if (isSearchActive) {
+      setPaginationArgs({ first: 50 });
+      setCursorStack([]);
+      setCurrentPage(1);
+
+      runSearch({
+        variables: {
+          searchText: debouncedSearchQuery,
+          first: 50,
+        },
+      });
+    }
+  }, [debouncedSearchQuery, isSearchActive, runSearch]);
+
+  // Effect to handle pagination changes
+  useEffect(() => {
+    if (isSearchActive && paginationArgs.after !== undefined) {
+      runSearch({
+        variables: {
+          searchText: debouncedSearchQuery,
+          ...paginationArgs,
+        },
+      });
+    }
+  }, [paginationArgs, isSearchActive, debouncedSearchQuery, runSearch]);
+
+  // Pagination functions
+  const loadNextSearchPage = useCallback(() => {
+    if (pageInfo.hasNextPage && pageInfo.endCursor) {
+      console.log(
+        '🔄 Next search page - Current cursor:',
+        paginationArgs.after
+      );
+      console.log('🔄 Next search page - Stack before:', cursorStack);
+
+      // Add current cursor to stack for backward navigation
+      if (paginationArgs.after) {
+        setCursorStack((prev) => [...prev, paginationArgs.after!]);
+      }
+
+      setPaginationArgs((prev) => ({
+        ...prev,
+        after: pageInfo.endCursor as string,
+      }));
+
+      // Increment current page
+      setCurrentPage((prev) => prev + 1);
+    }
+  }, [
+    pageInfo.hasNextPage,
+    pageInfo.endCursor,
+    paginationArgs.after,
+    cursorStack,
+  ]);
+
+  const loadPreviousSearchPage = useCallback(() => {
+    console.log('🔄 Previous search page - Stack:', cursorStack);
+    console.log(
+      '🔄 Previous search page - Current after:',
+      paginationArgs.after
+    );
+
+    if (cursorStack.length > 0) {
+      // Get the previous cursor from stack
+      const previousCursor = cursorStack[cursorStack.length - 1];
+      const newStack = cursorStack.slice(0, -1);
+
+      console.log('🔄 Previous search page - Using cursor:', previousCursor);
+      setCursorStack(newStack);
+      setPaginationArgs((prev) => ({
+        ...prev,
+        after: previousCursor,
+      }));
+
+      // Decrement current page
+      setCurrentPage((prev) => Math.max(1, prev - 1));
+    } else if (paginationArgs.after) {
+      // Go back to first page
+      console.log('🔄 Previous search page - Going to first page');
+      setPaginationArgs({ first: 50 });
+      setCurrentPage(1);
+    }
+  }, [cursorStack, paginationArgs.after]);
+
   const resetSearch = useCallback(() => {
     setSearchQuery('');
-    currentSearchRef.current = '';
-    setCurrentSearchCalled(false);
-    // Note: No need to manually clear `searchData`. The derived `searchResultCases`
-    // will become an empty array automatically when `searchQuery` is cleared.
+    setPaginationArgs({ first: 50 });
+    setCursorStack([]);
+    setCurrentPage(1);
   }, []);
 
+  // Calculate page range based on actual page number
+  const currentPageStart = currentPage === 1 ? 1 : (currentPage - 1) * 50 + 1;
+  const currentPageEnd = currentPageStart + searchResultCases.length - 1;
+
+  const hasNoResults =
+    isSearchActive && !isActuallySearching && searchResultCases.length === 0;
+
   return {
-    // State & Setter
+    // State
     searchQuery,
     setSearchQuery,
 
-    // Query Status
-    isSearching,
+    // Loading states
+    isActuallySearching,
     searchError,
 
-    // Results & Derived State
+    // Results
     searchResultCases,
-    hasNoResults, // True only when a search is complete and returned nothing
-    isSearchActive: isSearchLongEnough, // Simplified active flag
+    hasNoResults,
+    isSearchActive,
+
+    // Pagination
+    searchHasNextPage: pageInfo.hasNextPage,
+    searchHasPreviousPage:
+      cursorStack.length > 0 || Boolean(paginationArgs.after),
+    searchTotalCount: totalCount,
+    searchCurrentPageStart: currentPageStart,
+    searchCurrentPageEnd: currentPageEnd,
+    loadNextSearchPage,
+    loadPreviousSearchPage,
 
     // Utilities
     resetSearch,
