@@ -5,38 +5,13 @@ import { useState, useMemo, useEffect, useCallback } from 'react';
 import { Search, Filter, BookOpen } from 'lucide-react';
 import { useTextSearch } from '@/hooks/useTextSearch';
 import { useCaseProcessing } from '@/hooks/useCaseProcessing';
+import { usePagination } from '@/hooks/usePagination';
 import SelectJurisdiction from './SelectJurisdiction';
 import FilterPanel from './FilterPanel';
 import CaseTable from './CaseTable';
 import CaseListHeader from './CaseListHeader';
-import { Case } from '@/types/case';
-
-function Spinner() {
-  return (
-    <div className="flex justify-center items-center py-12">
-      <svg
-        className="animate-spin h-8 w-8 text-blue-600"
-        xmlns="http://www.w3.org/2000/svg"
-        fill="none"
-        viewBox="0 0 24 24"
-      >
-        <circle
-          className="opacity-25"
-          cx="12"
-          cy="12"
-          r="10"
-          stroke="currentColor"
-          strokeWidth="4"
-        ></circle>
-        <path
-          className="opacity-75"
-          fill="currentColor"
-          d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z"
-        ></path>
-      </svg>
-    </div>
-  );
-}
+import { Pagination } from './Pagination';
+import { Case, CaseConnection } from '@/types/case';
 
 export default function CaseList() {
   const router = useRouter();
@@ -48,16 +23,37 @@ export default function CaseList() {
     useState(false);
   const [showFilters, setShowFilters] = useState(false);
 
+  // Pagination hook for jurisdiction cases
+  const {
+    paginationArgs,
+    hasNextPage,
+    hasPreviousPage,
+    totalCount,
+    currentPageStart,
+    currentPageEnd,
+    loadNextPage,
+    loadPreviousPage,
+    resetPagination,
+    updatePaginationFromResult,
+  } = usePagination(50);
+
   // Custom hook for search logic
   const {
     searchQuery,
     setSearchQuery,
-    isSearching,
+    isActuallySearching,
     searchError,
     searchResultCases,
     hasNoResults,
     isSearchActive,
     resetSearch,
+    searchHasNextPage,
+    searchHasPreviousPage,
+    searchTotalCount,
+    searchCurrentPageStart,
+    searchCurrentPageEnd,
+    loadNextSearchPage,
+    loadPreviousSearchPage,
   } = useTextSearch();
 
   // Determine the primary data source
@@ -75,9 +71,9 @@ export default function CaseList() {
     handleSort,
   } = useCaseProcessing(sourceData);
 
-  // Show loading spinner only when loading jurisdiction cases, not during search
-  // Search has its own loading indicator in the input field
-  const isLoading = isLoadingJurisdictionCases;
+  // Consolidated loading state
+  const isLoading =
+    isLoadingJurisdictionCases || (isSearchActive && isActuallySearching);
 
   // Clear other data sources when one becomes active
   useEffect(() => {
@@ -85,65 +81,82 @@ export default function CaseList() {
       setSelectedJurisdiction('');
       setJurisdictionCases([]);
       clearFilters();
+      resetPagination();
     }
-  }, [isSearchActive, clearFilters]);
+  }, [isSearchActive, clearFilters, resetPagination]);
 
   const handleJurisdictionChange = useCallback(
     (jurisdiction: string) => {
       resetSearch();
       clearFilters();
+      resetPagination();
       setSelectedJurisdiction(jurisdiction);
       setIsLoadingJurisdictionCases(true);
     },
-    [resetSearch, clearFilters]
+    [resetSearch, clearFilters, resetPagination]
   );
 
   const handleClearJurisdictionSelect = useCallback(() => {
     resetSearch();
     clearFilters();
+    resetPagination();
     setSelectedJurisdiction('');
     setJurisdictionCases([]);
     setIsLoadingJurisdictionCases(false);
-  }, [resetSearch, clearFilters]);
+  }, [resetSearch, clearFilters, resetPagination]);
 
   const handleCasesLoaded = (loadedCases: Case[]) => {
     setJurisdictionCases(loadedCases);
     setIsLoadingJurisdictionCases(false);
   };
 
+  const handlePaginationDataLoaded = (paginationData: CaseConnection) => {
+    updatePaginationFromResult(paginationData);
+  };
+
   const handleRowClick = (caseId: string) => {
     router.push(`/case/${caseId}`);
   };
 
-  const courts = useMemo<string[]>(() => {
-    if (!processedCases || processedCases.length === 0) return [];
-    const unique = new Set<string>();
-    processedCases.forEach((caseItem: Case) => {
-      if (caseItem.court?.name) {
-        unique.add(caseItem.court.name);
-      }
-    });
-    return Array.from(unique).sort();
-  }, [processedCases]);
+  // Memoized filter options to prevent unnecessary recalculations
+  const { courts, years } = useMemo(() => {
+    if (!sourceData || sourceData.length === 0) {
+      return { courts: [], years: [] };
+    }
 
-  const years = useMemo<number[]>(() => {
-    if (!processedCases || processedCases.length === 0) return [];
-    const unique = new Set<number>();
-    processedCases.forEach((caseItem: Case) => {
+    const courtSet = new Set<string>();
+    const yearSet = new Set<number>();
+
+    sourceData.forEach((caseItem: Case) => {
+      if (caseItem.court?.name) {
+        courtSet.add(caseItem.court.name);
+      }
       if (caseItem.decision_date) {
         const year = new Date(caseItem.decision_date).getFullYear();
-        unique.add(year);
+        yearSet.add(year);
       }
     });
-    return Array.from(unique).sort((a, b) => b - a);
-  }, [processedCases]);
+
+    return {
+      courts: Array.from(courtSet).sort(),
+      years: Array.from(yearSet).sort((a, b) => b - a),
+    };
+  }, [sourceData]);
 
   const hasActiveFilters = Object.values(filters).some((value) => value !== '');
+  const shouldShowPagination =
+    ((selectedJurisdiction && !isSearchActive) || isSearchActive) &&
+    !hasActiveFilters;
 
   return (
     <div>
       {/* Header */}
-      <CaseListHeader caseCount={processedCases.length} />
+      <CaseListHeader
+        caseCount={processedCases.length}
+        totalCount={isSearchActive ? searchTotalCount : totalCount}
+        isSearchActive={isSearchActive}
+        selectedJurisdiction={selectedJurisdiction}
+      />
 
       {/* Jurisdiction Filter */}
       <SelectJurisdiction
@@ -151,13 +164,15 @@ export default function CaseList() {
         onJurisdictionChange={handleJurisdictionChange}
         onClearSelect={handleClearJurisdictionSelect}
         onCasesLoaded={handleCasesLoaded}
+        onPaginationDataLoaded={handlePaginationDataLoaded}
+        paginationArgs={paginationArgs}
         isLoading={isLoadingJurisdictionCases}
       />
 
       {/* Search and Filters */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
-        <div className="bg-white rounded-lg shadow-sm border p-6 mb-6">
-          <form className="space-y-4" onSubmit={(e) => e.preventDefault()}>
+        <div className="bg-white rounded-lg shadow-sm border p-6 mb-4">
+          <div className="space-y-4">
             <div className="flex flex-col sm:flex-row gap-4">
               <div className="flex-1">
                 <div className="relative">
@@ -167,13 +182,13 @@ export default function CaseList() {
                     placeholder="Search all cases by name, abbreviation, or docket number..."
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
-                    className={`w-full pl-10 pr-4 py-2 text-gray-700 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent ${
-                      isSearching
+                    className={`w-full pl-10 pr-4 py-2 text-gray-700 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors ${
+                      isActuallySearching
                         ? 'border-blue-300 bg-blue-50'
                         : 'border-gray-300'
                     }`}
                   />
-                  {isSearching && (
+                  {isActuallySearching && (
                     <div className="absolute right-3 top-1/2 transform -translate-y-1/2">
                       <div className="animate-spin h-4 w-4 border-2 border-blue-600 border-t-transparent rounded-full"></div>
                     </div>
@@ -200,7 +215,13 @@ export default function CaseList() {
                 </button>
               </div>
             </div>
-            {showFilters && (
+
+            {/* Filter Panel - Always rendered to prevent layout shifts */}
+            <div
+              className={`transition-all duration-200 overflow-hidden ${
+                showFilters ? 'max-h-96 opacity-100' : 'max-h-0 opacity-0'
+              }`}
+            >
               <FilterPanel
                 filters={filters}
                 setFilters={setFilters}
@@ -210,11 +231,11 @@ export default function CaseList() {
                 onClearFilters={clearFilters}
                 hasActiveFilters={hasActiveFilters}
               />
-            )}
-          </form>
+            </div>
+          </div>
         </div>
 
-        {/* Main Content */}
+        {/* Error Message */}
         {searchError && (
           <div className="bg-red-50 border border-red-200 rounded-lg p-4 mb-6">
             <p className="text-red-800 text-sm">
@@ -222,41 +243,109 @@ export default function CaseList() {
             </p>
           </div>
         )}
-        {isLoading ? (
-          <div className="bg-white rounded-lg shadow-sm border p-12 text-center">
-            <Spinner />
-            <p className="text-gray-600 mt-4">
-              Loading cases for {selectedJurisdiction}...
-            </p>
-          </div>
-        ) : processedCases && processedCases.length > 0 ? (
-          <CaseTable
-            cases={processedCases}
-            sortField={sortField}
-            sortDirection={sortDirection}
-            onSort={handleSort}
-            onRowClick={handleRowClick}
-          />
-        ) : (
-          <div className="bg-white rounded-lg shadow-sm border p-12 text-center">
-            <BookOpen className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-            <h3 className="text-lg font-medium text-gray-900 mb-2">
-              No cases found
-            </h3>
-            <p className="text-gray-600">
-              {isSearchActive && hasNoResults
-                ? 'Your search returned no results. Try a different query.'
-                : hasActiveFilters
-                ? 'No cases match your filter criteria. Try adjusting them.'
-                : 'Select a jurisdiction to browse cases or use the search bar for a global search.'}
-            </p>
-            {searchError && (
-              <p className="text-red-600 mt-2 text-sm">
-                Search error: {searchError.message}
-              </p>
+
+        <div className="space-y-4">
+          {/* Pagination or Filter Message - Only render when needed */}
+          {(hasActiveFilters || shouldShowPagination) && (
+            <div className="bg-white rounded-lg shadow-sm border p-4">
+              {hasActiveFilters ? (
+                <div className="px-4 py-3 bg-blue-50 border border-blue-200 rounded-lg text-sm text-blue-700">
+                  <div className="flex items-center justify-between">
+                    <span>
+                      📊 Showing filtered results. Pagination is disabled while
+                      filters are active.
+                    </span>
+                    <button
+                      onClick={clearFilters}
+                      className="text-blue-600 hover:text-blue-800 underline"
+                    >
+                      Clear filters
+                    </button>
+                  </div>
+                </div>
+              ) : (
+                <Pagination
+                  hasNextPage={isSearchActive ? searchHasNextPage : hasNextPage}
+                  hasPreviousPage={
+                    isSearchActive ? searchHasPreviousPage : hasPreviousPage
+                  }
+                  onNextPage={
+                    isSearchActive ? loadNextSearchPage : loadNextPage
+                  }
+                  onPreviousPage={
+                    isSearchActive ? loadPreviousSearchPage : loadPreviousPage
+                  }
+                  totalCount={isSearchActive ? searchTotalCount : totalCount}
+                  currentPageSize={processedCases.length}
+                  currentPageStart={
+                    isSearchActive ? searchCurrentPageStart : currentPageStart
+                  }
+                  currentPageEnd={
+                    isSearchActive ? searchCurrentPageEnd : currentPageEnd
+                  }
+                />
+              )}
+            </div>
+          )}
+
+          {/* Main Content Container */}
+          <div className="bg-white rounded-lg shadow-sm border transition-all duration-200">
+            {isLoading ? (
+              <div className="min-h-[400px] flex flex-col items-center justify-center">
+                <svg
+                  className="animate-spin h-8 w-8 text-blue-600"
+                  xmlns="http://www.w3.org/2000/svg"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                >
+                  <circle
+                    className="opacity-25"
+                    cx="12"
+                    cy="12"
+                    r="10"
+                    stroke="currentColor"
+                    strokeWidth="4"
+                  ></circle>
+                  <path
+                    className="opacity-75"
+                    fill="currentColor"
+                    d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z"
+                  ></path>
+                </svg>
+                <p className="text-gray-600 mt-4">
+                  {isSearchActive && isActuallySearching
+                    ? 'Searching for cases...'
+                    : `Loading cases for ${selectedJurisdiction}...`}
+                </p>
+              </div>
+            ) : processedCases && processedCases.length > 0 ? (
+              <CaseTable
+                cases={processedCases}
+                sortField={sortField}
+                sortDirection={sortDirection}
+                onSort={handleSort}
+                onRowClick={handleRowClick}
+              />
+            ) : (
+              <div className="min-h-[400px] flex flex-col items-center justify-center">
+                <BookOpen className="h-12 w-12 text-gray-400 mb-4" />
+                <h3 className="text-lg font-medium text-gray-900 mb-2">
+                  No cases found
+                </h3>
+                <p className="text-gray-600 text-center max-w-md">
+                  {isSearchActive && hasNoResults
+                    ? 'Your search returned no results. Try a different query.'
+                    : hasActiveFilters
+                    ? 'No cases match your filter criteria. Try adjusting them.'
+                    : 'Select a jurisdiction to browse cases or use the search bar for a global search.'}
+                </p>
+              </div>
             )}
           </div>
-        )}
+
+          {/* Bottom Spacer */}
+          <div className="h-6"></div>
+        </div>
       </div>
     </div>
   );
