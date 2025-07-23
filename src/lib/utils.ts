@@ -76,19 +76,40 @@ export function getCitationDisplay(
 
 export function getCaseStatus(decisionDate: string): {
   status: string;
+  significance: string;
   color: string;
 } {
-  const date = new Date(decisionDate);
-  const now = new Date();
-  const yearsDiff = now.getFullYear() - date.getFullYear();
+  const caseYear = new Date(decisionDate).getFullYear();
 
-  if (yearsDiff < 5) {
-    return { status: 'Recent', color: 'text-green-600 bg-green-100' };
-  } else if (yearsDiff < 20) {
-    return { status: 'Modern', color: 'text-blue-600 bg-blue-100' };
-  } else if (yearsDiff < 50) {
-    return { status: 'Historical', color: 'text-yellow-600 bg-yellow-50' };
+  if (caseYear >= 2010) {
+    return {
+      status: 'Digital Era',
+      significance: 'Current precedent, highly relevant',
+      color: 'text-green-600 bg-green-100',
+    };
+  } else if (caseYear >= 1990) {
+    return {
+      status: 'Information Age',
+      significance: 'Modern precedent, very relevant',
+      color: 'text-blue-600 bg-blue-100',
+    };
+  } else if (caseYear >= 1960) {
+    return {
+      status: 'Civil Rights Era',
+      significance: 'Foundational modern precedent',
+      color: 'text-purple-600 bg-purple-100',
+    };
+  } else if (caseYear >= 1900) {
+    return {
+      status: 'Industrial Era',
+      significance: 'Historical precedent, context-dependent',
+      color: 'text-yellow-600 bg-yellow-50',
+    };
   } else {
-    return { status: 'Classic', color: 'text-gray-600 bg-gray-100' };
+    return {
+      status: 'Classical Era',
+      significance: 'Foundational principles, rarely cited',
+      color: 'text-gray-600 bg-gray-100',
+    };
   }
 }

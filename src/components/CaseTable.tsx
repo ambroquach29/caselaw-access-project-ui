@@ -132,7 +132,7 @@ export default function CaseTable({
               <td className="px-6 py-4 whitespace-wrap text-sm text-gray-500">
                 {caseItem.docket_number || 'N/A'}
               </td>
-              <td className="px-6 py-4 text-left whitespace-wrap">
+              <td className="px-6 py-4 text-center whitespace-nowrap">
                 <span
                   className={`inline-flex py-1 text-sm font-semibold rounded-full px-2 ${
                     getCaseStatus(formatDate(caseItem.decision_date)).color
