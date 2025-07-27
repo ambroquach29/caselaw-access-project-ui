@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useLazyQuery } from '@apollo/client';
 import { ChevronDown, ChevronUp, MapPin, X } from 'lucide-react';
 import { GET_CASES_BY_JURISDICTION } from '@/lib/graphql/queries';
@@ -14,6 +14,7 @@ interface SelectJurisdictionProps {
   onCasesLoaded: (cases: any[]) => void;
   onPaginationDataLoaded?: (paginationData: CaseConnection) => void;
   paginationArgs?: PaginationArgs;
+  year?: string;
   isLoading?: boolean;
 }
 
@@ -24,6 +25,7 @@ export default function SelectJurisdiction({
   onCasesLoaded,
   onPaginationDataLoaded,
   paginationArgs,
+  year,
   isLoading: externalLoading,
 }: SelectJurisdictionProps) {
   const [isMinimized, setIsMinimized] = useState(false);
@@ -64,23 +66,33 @@ export default function SelectJurisdiction({
     }
   );
 
-  // Handle jurisdiction selection and pagination changes
-  useEffect(() => {
+  // Memoized query function to prevent dependency array issues
+  const executeQuery = useCallback(() => {
     if (selectedJurisdiction) {
       console.log(
         '🔍 Fetching cases for jurisdiction:',
         selectedJurisdiction,
+        'year:',
+        year,
+        'parsed year:',
+        year && year.trim() ? parseInt(year) : undefined,
         paginationArgs
       );
 
       getCasesByJurisdiction({
         variables: {
           jurisdiction: selectedJurisdiction,
+          year: year && year.trim() ? parseInt(year) : undefined,
           ...paginationArgs,
         },
       });
     }
-  }, [selectedJurisdiction, paginationArgs]);
+  }, [selectedJurisdiction, year, paginationArgs, getCasesByJurisdiction]);
+
+  // Handle jurisdiction selection and pagination changes
+  useEffect(() => {
+    executeQuery();
+  }, [executeQuery]);
 
   const searchedJurisdictions = ALL_JURISDICTIONS.filter((jurisdiction) =>
     jurisdiction.toLowerCase().includes(searchTerm.toLowerCase())
@@ -95,9 +107,9 @@ export default function SelectJurisdiction({
   };
 
   return (
-    <div className="bg-white shadow-sm border-b">
+    <div className="bg-white shadow-sm">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
-        <div className="flex items-center justify-between mb-3">
+        <div className="flex items-center justify-between mb-3 border-b border-gray-200 pb-4">
           <div className="flex items-center space-x-2">
             <MapPin className="h-5 w-5 text-gray-600" />
             <h2 className="text-lg font-semibold text-gray-900">
@@ -144,7 +156,7 @@ export default function SelectJurisdiction({
             </div>
 
             {/* Jurisdictions Grid */}
-            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-2 max-h-48 overflow-y-auto">
+            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-2 max-h-52 overflow-y-auto">
               {searchedJurisdictions.map((jurisdiction) => {
                 const isSelected = selectedJurisdiction === jurisdiction;
 
