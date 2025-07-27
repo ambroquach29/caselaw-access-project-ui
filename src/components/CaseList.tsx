@@ -16,6 +16,7 @@ export default function CaseList() {
   // State for jurisdiction-specific cases
   const [jurisdictionCases, setJurisdictionCases] = useState<Case[]>([]);
   const [selectedJurisdiction, setSelectedJurisdiction] = useState('');
+  const [selectedYear, setSelectedYear] = useState<string>('');
   const [isLoadingJurisdictionCases, setIsLoadingJurisdictionCases] =
     useState(false);
 
@@ -37,6 +38,7 @@ export default function CaseList() {
     (jurisdiction: string) => {
       resetPagination();
       setSelectedJurisdiction(jurisdiction);
+      setSelectedYear(''); // Reset year when jurisdiction changes
       setIsLoadingJurisdictionCases(true);
     },
     [resetPagination]
@@ -45,6 +47,7 @@ export default function CaseList() {
   const handleClearJurisdictionSelect = useCallback(() => {
     resetPagination();
     setSelectedJurisdiction('');
+    setSelectedYear('');
     setJurisdictionCases([]);
     setIsLoadingJurisdictionCases(false);
   }, [resetPagination]);
@@ -80,8 +83,40 @@ export default function CaseList() {
         onCasesLoaded={handleCasesLoaded}
         onPaginationDataLoaded={handlePaginationDataLoaded}
         paginationArgs={paginationArgs}
+        year={selectedYear}
         isLoading={isLoadingJurisdictionCases}
       />
+
+      {/* Year Filter - Only show when jurisdiction is selected */}
+      {selectedJurisdiction && (
+        <div className="bg-white shadow-sm">
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
+            {/* Divider */}
+            <div className="border-t border-gray-200 mb-4"></div>
+
+            <div className="flex items-center space-x-4">
+              <label className="text-sm font-medium text-gray-700">
+                Filter by Year:
+              </label>
+              <input
+                type="text"
+                value={selectedYear}
+                onChange={(e) => {
+                  const year = e.target.value;
+                  setSelectedYear(year);
+                  resetPagination();
+                  // Trigger a new query with the selected year
+                  if (selectedJurisdiction) {
+                    setIsLoadingJurisdictionCases(true);
+                  }
+                }}
+                placeholder="Enter year (e.g., 2010)"
+                className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-700"
+              />
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Main Content */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
