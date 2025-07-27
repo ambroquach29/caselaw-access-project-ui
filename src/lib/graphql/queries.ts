@@ -72,11 +72,13 @@ export const GET_CASES_BY_COURT = gql`
 export const GET_CASES_BY_JURISDICTION = gql`
   query GetCasesByJurisdiction(
     $jurisdiction: String!
+    $year: Int
     $first: Int
     $after: String
   ) {
     GetCasesByJurisdiction(
       jurisdiction: $jurisdiction
+      year: $year
       first: $first
       after: $after
     ) {
