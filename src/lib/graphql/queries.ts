@@ -233,12 +233,14 @@ export const SEARCH_CASES = gql`
   query SearchCases(
     $searchText: String!
     $jurisdiction: String
+    $year: Int
     $first: Int
     $after: String
   ) {
     SearchCases(
       searchText: $searchText
       jurisdiction: $jurisdiction
+      year: $year
       first: $first
       after: $after
     ) {
