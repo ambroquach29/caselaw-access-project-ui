@@ -6,7 +6,7 @@ import { BookOpen } from 'lucide-react';
 import { usePagination } from '@/hooks/usePagination';
 import SelectJurisdiction from './SelectJurisdiction';
 import CaseTable from './CaseTable';
-import CaseListHeader from './CaseListHeader';
+import CaseHeader from './CaseHeader';
 import { Pagination } from './Pagination';
 import { Case, CaseConnection } from '@/types/case';
 
@@ -68,7 +68,7 @@ export default function BrowseCases() {
   return (
     <div>
       {/* Header */}
-      <CaseListHeader
+      <CaseHeader
         caseCount={jurisdictionCases.length}
         totalCount={totalCount}
         isSearchActive={false}

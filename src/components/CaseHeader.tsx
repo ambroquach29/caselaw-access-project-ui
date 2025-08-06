@@ -1,18 +1,18 @@
 import { BookOpen } from 'lucide-react';
 
-interface CaseListHeaderProps {
+interface CaseHeaderProps {
   caseCount: number;
   totalCount?: number;
   isSearchActive?: boolean;
   selectedJurisdiction?: string;
 }
 
-export default function CaseListHeader({
+export default function CaseHeader({
   caseCount,
   totalCount,
   isSearchActive = false,
   selectedJurisdiction,
-}: CaseListHeaderProps) {
+}: CaseHeaderProps) {
   // Use total count if available, otherwise fall back to current count
   const displayCount = totalCount || caseCount;
 

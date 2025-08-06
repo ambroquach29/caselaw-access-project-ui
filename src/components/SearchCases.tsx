@@ -4,7 +4,7 @@ import { useRouter } from 'next/navigation';
 import { Search, BookOpen } from 'lucide-react';
 import { useTextSearch } from '@/hooks/useTextSearch';
 import CaseTable from './CaseTable';
-import CaseListHeader from './CaseListHeader';
+import CaseHeader from './CaseHeader';
 import { Pagination } from './Pagination';
 
 export default function SearchCases() {
@@ -39,7 +39,7 @@ export default function SearchCases() {
   return (
     <div>
       {/* Header */}
-      <CaseListHeader
+      <CaseHeader
         caseCount={searchResultCases.length}
         totalCount={searchTotalCount}
         isSearchActive={isSearchActive}
