@@ -1,10 +1,5 @@
-import CaseList from '@/components/CaseList';
+import TabNavigation from '@/components/TabNavigation';
 
 export default function Home() {
-  return (
-    <div className="min-h-screen bg-gray-50">
-      {/* Main Case List */}
-      <CaseList />
-    </div>
-  );
+  return <TabNavigation />;
 }
