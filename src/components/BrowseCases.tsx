@@ -10,7 +10,7 @@ import CaseListHeader from './CaseListHeader';
 import { Pagination } from './Pagination';
 import { Case, CaseConnection } from '@/types/case';
 
-export default function CaseList() {
+export default function BrowseCases() {
   const router = useRouter();
 
   // State for jurisdiction-specific cases

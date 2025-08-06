@@ -7,7 +7,7 @@ import CaseTable from './CaseTable';
 import CaseListHeader from './CaseListHeader';
 import { Pagination } from './Pagination';
 
-export default function CaseSearchList() {
+export default function SearchCases() {
   const router = useRouter();
 
   const {

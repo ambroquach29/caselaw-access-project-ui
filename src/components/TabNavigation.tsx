@@ -2,8 +2,8 @@
 
 import { useState } from 'react';
 import { BookOpen, Search } from 'lucide-react';
-import CaseList from './CaseList';
-import CaseSearchList from './CaseSearchList';
+import BrowseCases from './BrowseCases';
+import SearchCases from './SearchCases';
 
 type TabType = 'browse' | 'search';
 
@@ -80,8 +80,8 @@ export default function TabNavigation() {
 
       {/* Tab Content */}
       <div className="tab-content">
-        {activeTab === 'browse' && <CaseList />}
-        {activeTab === 'search' && <CaseSearchList />}
+        {activeTab === 'browse' && <BrowseCases />}
+        {activeTab === 'search' && <SearchCases />}
       </div>
     </div>
   );
